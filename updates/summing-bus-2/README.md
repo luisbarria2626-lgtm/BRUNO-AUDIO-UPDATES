@@ -1,42 +1,65 @@
-# SUMMING BUS 2+ — Official update channel
+# SUMMING BUS 2+ — Canal oficial de actualizaciones
 
-Publisher: BRUNO AUDIO  
-Repository: https://github.com/luisbarria2626-lgtm/BRUNO-AUDIO-UPDATES
+Editor: **BRUNO AUDIO**  
+Producto: **SUMMING BUS 2+**  
+Rama de publicación: `main`
 
-## Status
+## Estado de publicación
 
-**Not yet active.** No downloadable updates have been released. Do not treat this repository or an HTTPS response alone as proof that an executable is authentic.
+**NO PUBLICADO — versión 1.0.1 pendiente de validación.**
 
-The Windows updater is a separate JUCE application launched from SUMMING BUS 2+'s SETTINGS > CHECK FOR UPDATES menu.
+El actualizador C++/JUCE ya dispone de una interfaz local con `WHAT'S NEW`, estado de descarga y verificación de un manifiesto firmado. Esto **no** acredita todavía una actualización completa, un instalador publicado ni pruebas exitosas en un DAW.
 
-## Planned production endpoint
+Endpoint de producción previsto:
 
 `https://raw.githubusercontent.com/luisbarria2626-lgtm/BRUNO-AUDIO-UPDATES/main/updates/summing-bus-2/latest.json`
 
-Do **not** create or publish `latest.json` until an actual installer is released and the updater's authenticity checks are ready.
+Firma separada obligatoria: `latest.json.sig` (misma URL más `.sig`).
 
-## Planned manifest fields
+La ausencia de estos archivos causa **HTTP 404** y es deliberada hasta que se cumplan las condiciones de publicación.
+
+## Contrato del manifiesto — ejemplo NO publicable
 
 ```json
 {
   "product": "SUMMING BUS 2+",
   "version": "1.0.1",
   "installer_url": "https://github.com/luisbarria2626-lgtm/BRUNO-AUDIO-UPDATES/releases/download/v1.0.1/BRUNO-AUDIO-SUMMING-BUS-2-Setup.exe",
-  "sha256": "THE_REAL_64_CHARACTER_INSTALLER_SHA256"
+  "sha256": "SUSTITUIR_POR_SHA256_REAL_DEL_INSTALADOR_FIRMADO",
+  "release_notes": [
+    "Describir aqui exclusivamente cambios comprobados en la compilacion distribuida"
+  ]
 }
 ```
 
-This is a **schema example only**, not a release. The program currently accepts the three fields `version`, `installer_url`, and `sha256` plus product name. A GitHub Release download will redirect to a GitHub asset host. The existing JUCE downloader has `withNumRedirectsToFollow(0)`, so that code must be carefully updated and tested before the channel is activated.
+Este JSON ilustra la estructura únicamente: **no copiarlo a `latest.json` para publicación**.
 
-## Production security gate
+Los campos `release_notes` deben describir mejoras reales (perillas, medidores, DSP, estabilidad, compatibilidad) y verificadas. No afirmar optimizaciones ni correcciones no demostradas.
 
-1. Obtain a genuine code-signing certificate for the intended software publisher; never place its private key in this public repository.
-2. Validate the publisher certificate with Windows Authenticode and a trusted publisher identity. Inspect actual verification implementation, including certificate-chain, revocation and signing policy.
-3. Authenticate release metadata independently (for example, with a signed manifest and an embedded public verification key) to prevent attackers who modify release metadata from redirecting the updater to an unintended, even signed, package.
-4. Verify the downloaded installer's SHA-256, product identity, version, signature and authorization before execution.
-5. Check that an audio host is not running, get explicit user consent, and install outside the DAW. Preserve rollback support.
-6. Validate normal operation and failure cases on a real Windows test environment.
+## Seguridad del actualizador
 
-### Current version
+1. Generar un instalador definitivo desde la compilación VST3 1.0.1 verificada. Conservar los identificadores originales del plugin y el `AppId` del instalador.
+2. Probar instalación 1.0.0 → 1.0.1 con Ableton cerrado. Probar expresamente el error de archivo bloqueado y la recuperación ante fallo; nunca borrar a la fuerza un plugin utilizado por un host.
+3. Firmar el ejecutable instalador mediante certificado Authenticode válido y comprobar su cadena de confianza. La configuración local `publisher_cert_sha256` deberá coincidir con el certificado del editor utilizado; no conservar marcadores `REPLACE_WITH...`.
+4. Calcular SHA-256 **después** de firmar el ejecutable. Publicar el ejecutable inalterado como recurso de GitHub Release y comprobar que la URL permite descargarlo con los redireccionamientos admitidos por JUCE.
+5. Generar el `latest.json` con URL, SHA-256 y notas de versión reales. Firmar **los bytes exactos** del archivo con la clave privada RSA correspondiente a `BrunoManifestKey.h`; publicar la firma hexadecimal separada como `latest.json.sig`. No almacenar la clave privada en GitHub.
+6. Verificar en un equipo de prueba: firma RSA válida; alteración del manifiesto rechazada; firma del instalador comprobada; descarga completa; tratamiento de 404; host abierto; cancelación; error de permisos; versión instalada correcta.
+7. **No marcar `UPDATE COMPLETE` solo porque se inició el instalador**. El actualizador necesita recibir el resultado de finalización y verificar la versión realmente instalada.
 
-SUMMING BUS 2+ currently reports version `1.0.0` in the development setup. There is no published update yet.
+## Protocolo de experiencia del usuario
+
+- `CHECK FOR UPDATES` → descargar y validar el manifiesto firmado.
+- `WHAT'S NEW` → mostrar únicamente `release_notes` autentificadas.
+- `UPDATE` → descargar y verificar el instalador firmado.
+- `DOWNLOADING UPDATE` → mostrar progreso real a partir de bytes recibidos; si no se conoce el tamaño, usar progreso indeterminado.
+- `INSTALLING` → gestionar el instalador externo, solicitando guardar y cerrar el DAW cuando corresponda.
+- `UPDATE COMPLETE` → solo tras instalación exitosa y comprobación final.
+
+## Trabajo pendiente confirmado
+
+- No existe `latest.json` ni `latest.json.sig` en `main`.
+- No hay instalador de 1.0.1 firmado y publicado verificado.
+- La integración con Inno Setup para progreso de instalación, finalización y confirmación todavía requiere implementación y pruebas.
+- No se ha demostrado instalación automática integral de 1.0.0 a 1.0.1.
+
+**Regla:** no activar el endpoint de producción antes de validar estos requisitos.
